@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+
+# Virtual environments
+venv/
+env/
+
+
+# OS files
+.DS_Store
+Thumbs.db
+
+
+# Logs and temp files
+logs/
+*.log
+*.tmp
+
+
+# Experiment outputs
+experiments/results/*
+
+
+# Large files (prevent accidental push)
+*.pt
+*.pth
+*.ckpt
+*.h5
+*.npz
+
+
+# Datasets
+data_processed
