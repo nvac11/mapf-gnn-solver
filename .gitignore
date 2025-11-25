@@ -9,6 +9,9 @@ __pycache__/
 venv/
 env/
 
+# idefiles
+.vscode
+
 
 # OS files
 .DS_Store
