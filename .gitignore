@@ -9,8 +9,20 @@ __pycache__/
 venv/
 env/
 
-# idefiles
-.vscode
+# IDE / Editor settings
+.vscode/
+.vscode/*
+.idea/
+*.code-workspace
+
+# JetBrains IDEs
+*.iml
+out/
+.idea_modules/
+
+# VSCode extensions workspace settings
+.history/
+
 
 
 # OS files
