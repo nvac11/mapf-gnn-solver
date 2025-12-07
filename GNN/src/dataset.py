@@ -11,9 +11,7 @@ from torch_geometric.data import Data
 from itertools import product
 
 
-# ================================================================
-# ===============  Domain Model Types  ============================
-# ================================================================
+
 
 @dataclass(frozen=True)
 class Pos:
@@ -101,7 +99,7 @@ def action_label(p0: Pos, p1: Pos) -> int:
 
 
 # ================================================================
-# ===============  JSON → Strongly Typed Instance  ===============
+# ===============  JSON   ===============
 # ================================================================
 
 def load_instance(raw: Dict[str, Any]) -> Instance:
@@ -131,7 +129,15 @@ def load_instance(raw: Dict[str, Any]) -> Instance:
 # ===============  INSTANCE → LIST[Data] ==========================
 # ================================================================
 
-def instance_to_data(inst: Instance) -> List[Data]:
+def instance_to_data(inst: Instance, skip_goal_stay: bool = True) -> List[Data]:
+    """
+    Convert instance to list of PyG Data objects.
+    
+    Args:
+        inst: Instance to convert
+        skip_goal_stay: If True, skip timesteps where agent is already at goal
+                       and action is STAY (reduces bias toward STAY action)
+    """
     H, W = inst.height, inst.width
     n = H * W
 
@@ -150,6 +156,10 @@ def instance_to_data(inst: Instance) -> List[Data]:
         for t in range(T):
             p0 = path[t]
             p1 = path[t+1] if t+1 < T else p0
+
+            # FILTRAGE: Skip si agent déjà au goal et action = STAY
+            if skip_goal_stay and p0 == goal and p1 == goal:
+                continue
 
             ego_i = pos_to_idx(p0.x, p0.y, W, H)
             goal_i = pos_to_idx(goal.x, goal.y, W, H)
@@ -213,21 +223,44 @@ def instance_to_data(inst: Instance) -> List[Data]:
 # ===============  PROCESS DIRECTORY =============================
 # ================================================================
 
-def preprocess_dir(source: str, destination: str) -> None:
+def preprocess_dir(source: str, destination: str, skip_goal_stay: bool = True) -> None:
     """
     Load all JSON instances, convert to Data, and save one dataset.pt.
+    
+    Args:
+        source: Directory containing JSON files
+        destination: Directory to save processed dataset
+        skip_goal_stay: If True, skip examples where agent is at goal with STAY action
     """
     dst = Path(destination)
     dst.mkdir(exist_ok=True)
 
     all_graphs: List[Data] = []
+    action_counts = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}  # Count actions
 
     for json_file in Path(source).glob("*.json"):
         raw_list = json.load(open(json_file))
 
         for raw in raw_list:
             inst = load_instance(raw)
-            all_graphs.extend(instance_to_data(inst))
+            graphs = instance_to_data(inst, skip_goal_stay=skip_goal_stay)
+            all_graphs.extend(graphs)
+            
+            # Count actions
+            for g in graphs:
+                action_counts[g.y.item()] += 1
 
+    # Save dataset
     torch.save(all_graphs, dst / "dataset.pt")
-    print(f"Saved {len(all_graphs)} graphs to {dst/'dataset.pt'}")
+    
+    # Print statistics
+    total = sum(action_counts.values())
+    print(f"\n=== Dataset Statistics ===")
+    print(f"Total graphs: {len(all_graphs)}")
+    print(f"Action distribution:")
+    print(f"  0 (down):  {action_counts[0]:6d} ({action_counts[0]/total*100:.1f}%)")
+    print(f"  1 (up):    {action_counts[1]:6d} ({action_counts[1]/total*100:.1f}%)")
+    print(f"  2 (right): {action_counts[2]:6d} ({action_counts[2]/total*100:.1f}%)")
+    print(f"  3 (left):  {action_counts[3]:6d} ({action_counts[3]/total*100:.1f}%)")
+    print(f"  4 (stay):  {action_counts[4]:6d} ({action_counts[4]/total*100:.1f}%)")
+    print(f"\nSaved to {dst/'dataset.pt'}")
