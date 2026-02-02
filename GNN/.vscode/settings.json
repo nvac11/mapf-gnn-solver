@@ -1,6 +1,0 @@
-{
-    "python-envs.pythonProjects": [],
-    "files.watcherExclude": {
-        "**/target": true
-    }
-}
